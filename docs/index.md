@@ -173,9 +173,6 @@ print(group.attrs.asdict())
     'multiscales': (
         {
             'version': '0.4',
-            'name': None,
-            'type': None,
-            'metadata': None,
             'datasets': (
                 {
                     'path': 's0',
@@ -196,7 +193,6 @@ print(group.attrs.asdict())
                 {'name': 'x', 'type': 'space', 'unit': 'meter'},
                 {'name': 'y', 'type': 'space', 'unit': 'meter'},
             ),
-            'coordinateTransformations': None,
         },
     )
 }

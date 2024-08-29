@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Literal
 
-from pydantic_ome_ngff.v04.multiscale import Group as MultiscaleGroup
+from pydantic_ome_ngff.v04 import MultiscaleGroup
 
 from xarray_ome_ngff.array_wrap import (
     ArrayWrapperSpec,
@@ -32,6 +32,8 @@ from xarray import DataArray
 from zarr.storage import BaseStore
 
 from xarray_ome_ngff.core import CoordinateAttrs, ureg
+
+DEFAULT_COMPRESSOR = Zstd(3)
 
 
 def multiscale_metadata(
@@ -322,12 +324,12 @@ def normalize_transforms(
     return out_scale, out_trans
 
 
-def model_group(
+def model_multiscale_group(
     *,
     arrays: dict[str, DataArray],
     transform_precision: int | None = None,
     chunks: tuple[int, ...] | tuple[tuple[int, ...]] | Literal["auto"] = "auto",
-    compressor: Codec | None = Zstd(3),
+    compressor: Codec | None = DEFAULT_COMPRESSOR,
     fill_value: Any = 0,
 ) -> MultiscaleGroup:
     """
@@ -341,8 +343,18 @@ def model_group(
         A mapping from strings to `xarray.DataArray`.
     transform_precision: int | None, default is None
         Whether, and how much, to round the transformations estimated from the coordinates.
-        The default (`None`) results in no rounding; specifying an `int` x will round transforms to
-        x decimal places using `numpy.round(transform, x)`.
+        The default (`None`) results in no rounding; if `transform_precision` is an int, then
+        transforms will be rounded to `transform_precision` decimal places using `numpy.round`.
+    chunks: tuple[int] | tuple[tuple[int, ...]] | Literal["auto"], default = "auto"
+        The chunks for the arrays in the multiscale group.
+        If the string "auto" is provided, each array will have chunks set to the zarr-python default
+        value, which depends on the shape and dtype of the array.
+        If a single sequence of ints is provided, then this defines the chunks for all arrays.
+        If a sequence of sequences of ints is provided, then this defines the chunks for each array.
+    compressor: Codec | None, default = numcodecs.ZStd.
+        The compressor to use for the arrays. Default is `numcodecs.ZStd`.
+    fill_value: Any
+        The fill value for the Zarr arrays.
     """
 
     # pluralses of plurals
@@ -377,15 +389,16 @@ def model_group(
     return group
 
 
-def create_group(
+def create_multiscale_group(
     *,
     store: BaseStore,
     path: str,
     arrays: dict[str, DataArray],
     transform_precision: int | None = None,
     chunks: tuple[int, ...] | tuple[tuple[int, ...]] | Literal["auto"] = "auto",
-    compressor: Codec | None = Zstd(3),
+    compressor: Codec | None = DEFAULT_COMPRESSOR,
     fill_value: Any = 0,
+    overwrite: bool = False,
 ) -> zarr.Group:
     """
     Create Zarr group that complies with 0.4 of the OME-NGFF multiscale specification from a dict
@@ -402,20 +415,32 @@ def create_group(
         Whether, and how much, to round the transformations estimated from the coordinates.
         The default (`None`) results in no rounding; specifying an `int` x will round transforms to
         x decimal places using `numpy.round(transform, x)`.
-
+     chunks: tuple[int] | tuple[tuple[int, ...]] | Literal["auto"], default = "auto"
+        The chunks for the arrays in the multiscale group.
+        If the string "auto" is provided, each array will have chunks set to the zarr-python default
+        value, which depends on the shape and dtype of the array.
+        If a single sequence of ints is provided, then this defines the chunks for all arrays.
+        If a sequence of sequences of ints is provided, then this defines the chunks for each array.
+    compressor: Codec | None, default = numcodecs.ZStd.
+        The compressor to use for the arrays. Default is `numcodecs.ZStd`.
+    fill_value: Any
+        The fill value for the Zarr arrays.
+    overwrite: bool, default = False
+        Whether to overwrite an existing Zarr array or group at `path`. Default is False, which will
+        result in an exception being raised if a Zarr array or group already exists at `path`.
     """
 
-    model = model_group(
+    model = model_multiscale_group(
         arrays=arrays,
         transform_precision=transform_precision,
         chunks=chunks,
         compressor=compressor,
         fill_value=fill_value,
     )
-    return model.to_zarr(store, path)
+    return model.to_zarr(store, path, overwrite=overwrite)
 
 
-def read_group(
+def read_multiscale_group(
     group: zarr.Group,
     *,
     array_wrapper: (
@@ -471,7 +496,7 @@ def read_group(
     return result
 
 
-def read_array(
+def read_multiscale_array(
     array: zarr.Array,
     *,
     array_wrapper: (
@@ -538,6 +563,6 @@ def read_array(
         except KeyError:
             parent = get_parent(parent)
     raise FileNotFoundError(
-        f"Could not find version 0.4 OME-NGFF multiscale metadata in any Zarr groups in the "
+        "Could not find version 0.4 OME-NGFF multiscale metadata in any Zarr groups"
         f"ancestral to the array at {array.path}"
     )
