@@ -15,22 +15,27 @@ from xarray_ome_ngff.array_wrap import (
 )
 from xarray_ome_ngff.core import CoordinateAttrs, ureg
 from xarray_ome_ngff.v04.multiscale import (
-    create_group,
-    read_array,
-    read_group,
+    create_multiscale_group,
+    read_multiscale_array,
+    read_multiscale_group,
     transforms_from_coords,
-    model_group,
+    model_multiscale_group,
     multiscale_metadata,
     coords_from_transforms,
 )
 from zarr.storage import FSStore, BaseStore
 from numcodecs import Zstd
 from pydantic_ome_ngff.v04.axis import Axis
-from pydantic_ome_ngff.v04.multiscale import MultiscaleMetadata, Dataset, Group
+from pydantic_ome_ngff.v04.multiscale import (
+    MultiscaleMetadata,
+    Dataset,
+    MultiscaleGroup,
+)
 from pydantic_ome_ngff.v04.transform import (
     VectorScale,
     VectorTranslation,
 )
+from zarr.errors import ContainsGroupError
 
 try:
     import dask.array as da
@@ -79,7 +84,7 @@ def create_array(
 
 
 @pytest.fixture(scope="function")
-def store(request, tmpdir):
+def store(request, tmpdir) -> zarr.MemoryStore | FSStore | zarr.NestedDirectoryStore:
     param: Literal["memory", "fsstore", "nested_directory"] = request.param
 
     if param == "memory":
@@ -115,12 +120,13 @@ def pyramid(request) -> tuple[DataArray, DataArray, DataArray]:
         units = ("meter",) * len(shape)
     else:
         units = param.units
-
+    scale: tuple[float | int, ...]
     if param.scale == "auto":
         scale = (1,) * len(shape)
     else:
         scale = param.scale
 
+    translate: tuple[float | int, ...]
     if param.translate == "auto":
         translate = (0,) * len(shape)
     else:
@@ -132,7 +138,7 @@ def pyramid(request) -> tuple[DataArray, DataArray, DataArray]:
 
     coarsen_kwargs = {**{dim: 2 for dim in data.dims}, "boundary": "trim"}
     multi = (data, data.coarsen(**coarsen_kwargs).mean())
-    multi += (multi[-1].coarsen(**coarsen_kwargs).mean(),)
+    multi += (multi[-1].coarsen(**coarsen_kwargs).mean(),) # type: ignore
     return multi
 
 
@@ -245,7 +251,7 @@ def test_axes_consistent_dims(pyramid: tuple[DataArray, DataArray, DataArray]):
         "and / or coordinates are incompatible."
     )
     with pytest.raises(ValueError, match=msg):
-        model_group(arrays=dict(zip(("s0", "s1", "s2"), pyramid_mutated)))
+        model_multiscale_group(arrays=dict(zip(("s0", "s1", "s2"), pyramid_mutated)))
 
 
 @pytest.mark.parametrize(
@@ -278,7 +284,7 @@ def test_axes_consistent_units(pyramid: tuple[DataArray, DataArray, DataArray]):
         "and / or coordinates are incompatible."
     )
     with pytest.raises(ValueError, match=msg):
-        model_group(arrays=dict(zip(("s0", "s1", "s2"), pyramid)))
+        model_multiscale_group(arrays=dict(zip(("s0", "s1", "s2"), pyramid)))
 
 
 @pytest.mark.parametrize("normalize_units", [True, False])
@@ -366,6 +372,7 @@ def test_create_axes_transforms(normalize_units: bool, infer_axis_type: bool) ->
 @pytest.mark.parametrize("chunks", ("auto", 10))
 @pytest.mark.parametrize("compressor", (None, Zstd(3)))
 @pytest.mark.parametrize("fill_value", (0, 1))
+@pytest.mark.parametrize("overwrite", (True, False))
 def test_read_create_group(
     store: BaseStore,
     paths: tuple[str, str, str],
@@ -373,12 +380,12 @@ def test_read_create_group(
     array_wrapper: (
         ZarrArrayWrapper
         | DaskArrayWrapper
-        | DaskArrayWrapperSpec
-        | ZarrArrayWrapperSpec
+        | ArrayWrapperSpec
     ),
     chunks: int | Literal["auto"],
     compressor: None | Zstd,
     fill_value: Literal[0, 1],
+    overwrite: bool,
 ) -> None:
     # write some values to the arrays
     pyramid[0][:] = 1
@@ -392,7 +399,7 @@ def test_read_create_group(
     else:
         _chunks = chunks
 
-    expected_group_model = Group.from_arrays(
+    expected_group_model = MultiscaleGroup.from_arrays(
         arrays=tuple(arrays.values()),
         paths=tuple(arrays.keys()),
         axes=axes[0],
@@ -403,14 +410,14 @@ def test_read_create_group(
         fill_value=fill_value,
     )
 
-    observed_group_model = model_group(
+    observed_group_model = model_multiscale_group(
         arrays=arrays, chunks=_chunks, fill_value=fill_value, compressor=compressor
     )
 
     assert observed_group_model == expected_group_model
 
     # now test reconstructing our original arrays
-    zarr_group = create_group(
+    zarr_group = create_multiscale_group(
         store=store, path="test", arrays=arrays, transform_precision=8
     )
 
@@ -418,7 +425,7 @@ def test_read_create_group(
     for path, arr in arrays.items():
         zarr_group[path][:] = arr.data
 
-    observed_arrays = read_group(zarr_group, array_wrapper=array_wrapper)
+    observed_arrays = read_multiscale_group(zarr_group, array_wrapper=array_wrapper)
 
     if isinstance(array_wrapper, dict):
         array_wrapper_parsed = resolve_wrapper(array_wrapper)
@@ -437,6 +444,25 @@ def test_read_create_group(
             )
         assert expected_array.attrs == observed_array.attrs
         assert observed_array.equals(expected_array)
+
+    sub_arrays = {paths[0]: arrays[paths[0]]}
+    if overwrite:
+        _ = create_multiscale_group(
+            store=store,
+            path="test",
+            arrays=sub_arrays,
+            transform_precision=8,
+            overwrite=overwrite,
+        )
+    else:
+        with pytest.raises(ContainsGroupError, match="contains a group"):
+            _ = create_multiscale_group(
+                store=store,
+                path="test",
+                arrays=sub_arrays,
+                transform_precision=8,
+                overwrite=overwrite,
+            )
 
 
 @pytest.mark.parametrize(
@@ -493,11 +519,11 @@ def test_multiscale_to_array(
         array_wrapper_parsed = array_wrapper
 
     arrays = dict(zip(paths, pyramid))
-    zarr_group = create_group(
+    zarr_group = create_multiscale_group(
         store=store, path="test", arrays=arrays, transform_precision=8
     )
     for name, arr_expc in arrays.items():
-        arr_obs = read_array(zarr_group[name], array_wrapper=array_wrapper)
+        arr_obs = read_multiscale_array(zarr_group[name], array_wrapper=array_wrapper)
         if isinstance(array_wrapper_parsed, ZarrArrayWrapper):
             assert isinstance(arr_obs.data, np.ndarray)
         elif isinstance(array_wrapper_parsed, DaskArrayWrapper):

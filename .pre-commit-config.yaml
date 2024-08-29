@@ -7,7 +7,7 @@ default_language_version:
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     # Ruff version.
-    rev: v0.4.3
+    rev: v0.6.3
     hooks:
     # Run the linter.
     - id: ruff
@@ -15,19 +15,14 @@ repos:
     # Run the formatter.
     - id: ruff-format
   - repo: https://github.com/codespell-project/codespell
-    rev: v2.2.6
+    rev: v2.3.0
     hooks:
       - id: codespell
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
+    rev: v4.6.0
     hooks:
     - id: check-yaml
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.9.0
+    rev: v1.11.2
     hooks:
       - id: mypy
-        files: zarr
-        args: []
-        additional_dependencies:
-          - types-redis
-          - types-setuptools

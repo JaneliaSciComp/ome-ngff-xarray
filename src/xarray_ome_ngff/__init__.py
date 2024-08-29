@@ -52,7 +52,9 @@ def read_multiscale_group(
     if ngff_version not in NGFF_VERSIONS:
         raise ValueError(f"Unsupported NGFF version: {ngff_version}")
     if ngff_version == "0.4":
-        return multiscale_v04.read_group(group, array_wrapper=array_wrapper, **kwargs)
+        return multiscale_v04.read_multiscale_group(
+            group, array_wrapper=array_wrapper, **kwargs
+        )
 
 
 # todo: remove the need to specify the version for reading
@@ -80,7 +82,9 @@ def read_multiscale_array(
     if ngff_version not in NGFF_VERSIONS:
         raise ValueError(f"Unsupported NGFF version: {ngff_version}")
     if ngff_version == "0.4":
-        return multiscale_v04.read_array(array, array_wrapper=array_wrapper, **kwargs)
+        return multiscale_v04.read_multiscale_array(
+            array, array_wrapper=array_wrapper, **kwargs
+        )
 
 
 def model_multiscale_group(
@@ -108,7 +112,7 @@ def model_multiscale_group(
     if ngff_version not in NGFF_VERSIONS:
         raise ValueError(f"Unsupported NGFF version: {ngff_version}")
     if ngff_version == "0.4":
-        return multiscale_v04.model_group(
+        return multiscale_v04.model_multiscale_group(
             arrays=arrays, transform_precision=transform_precision
         )
 
@@ -138,7 +142,7 @@ def create_multiscale_group(
     if ngff_version not in NGFF_VERSIONS:
         raise ValueError(f"Unsupported NGFF version: {ngff_version}")
     if ngff_version == "0.4":
-        return multiscale_v04.create_group(
+        return multiscale_v04.create_multiscale_group(
             store=store,
             path=path,
             arrays=arrays,
