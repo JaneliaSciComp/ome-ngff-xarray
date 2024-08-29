@@ -62,6 +62,15 @@ extra-dependencies = [
 [tool.hatch.envs.types.scripts]
 check = "mypy --install-types --non-interactive {args:src/xarray_ome_ngff tests}"
 
+[tool.hatch.envs.docs]
+dependencies = [
+  "mkdocs-material==9.5.33",
+  "mkdocstrings[python]==0.25.2"
+  ]
+
+[tool.hatch.envs.docs.scripts]
+serve = "mkdocs serve --watch=src"
+
 [tool.coverage.run]
 source_pkgs = ["xarray_ome_ngff", "tests"]
 branch = true
