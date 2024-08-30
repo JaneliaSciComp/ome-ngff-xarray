@@ -11,7 +11,7 @@ from xarray_ome_ngff.core import NGFF_VERSIONS
 
 if TYPE_CHECKING:
     from typing import Literal
-    from pydantic_ome_ngff.v04.multiscale import Group as MultiscaleGroupV04
+    from pydantic_ome_ngff.v04.multiscale import MultiscaleGroup as MultiscaleGroupV04
 from numcodecs.abc import Codec
 from xarray import DataArray
 import zarr
@@ -147,6 +147,7 @@ def create_multiscale_group(
     chunks: tuple[int, ...] | tuple[tuple[int, ...]] | Literal["auto"] = "auto",
     compressor: Codec | None = multiscale_v04.DEFAULT_COMPRESSOR,
     fill_value: Any = 0,
+    overwrite: bool = False,
 ) -> MultiscaleGroupV04:
     """
     store: zarr.storage.BaseStore
@@ -183,6 +184,7 @@ def create_multiscale_group(
             compressor=compressor,
             chunks=chunks,
             fill_value=fill_value,
+            overwrite=overwrite,
         )
 
 
