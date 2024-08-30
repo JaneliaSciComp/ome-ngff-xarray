@@ -7,6 +7,7 @@ from xarray import DataArray
 import numpy as np
 from typing import Literal, Optional, Any
 from xarray_ome_ngff.array_wrap import (
+    ArrayWrapperSpec,
     DaskArrayWrapper,
     DaskArrayWrapperSpec,
     ZarrArrayWrapper,
@@ -138,7 +139,7 @@ def pyramid(request) -> tuple[DataArray, DataArray, DataArray]:
 
     coarsen_kwargs = {**{dim: 2 for dim in data.dims}, "boundary": "trim"}
     multi = (data, data.coarsen(**coarsen_kwargs).mean())
-    multi += (multi[-1].coarsen(**coarsen_kwargs).mean(),) # type: ignore
+    multi += (multi[-1].coarsen(**coarsen_kwargs).mean(),)  # type: ignore
     return multi
 
 
@@ -377,11 +378,7 @@ def test_read_create_group(
     store: BaseStore,
     paths: tuple[str, str, str],
     pyramid: tuple[DataArray, DataArray, DataArray],
-    array_wrapper: (
-        ZarrArrayWrapper
-        | DaskArrayWrapper
-        | ArrayWrapperSpec
-    ),
+    array_wrapper: (ZarrArrayWrapper | DaskArrayWrapper | ArrayWrapperSpec),
     chunks: int | Literal["auto"],
     compressor: None | Zstd,
     fill_value: Literal[0, 1],

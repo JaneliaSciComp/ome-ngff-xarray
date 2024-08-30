@@ -45,6 +45,8 @@ def get_store_url(store: BaseStore) -> str:
             store_path = store.path
         return f"{protocol}://{store_path}"
     else:
+        if isinstance(store, zarr.MemoryStore):
+            return f"memory://{id(store)}/"
         msg = (
             f"The store associated with this object has type {type(store)}, which "
             "cannot be resolved to a url"

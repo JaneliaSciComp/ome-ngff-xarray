@@ -26,29 +26,37 @@ the attributes of the Zarr group to generate coordinates for each `DataArray`.
 import zarr
 from xarray_ome_ngff import read_multiscale_group, DaskArrayWrapper
 group = zarr.open_group("https://uk1s3.embassy.ebi.ac.uk/idr/zarr/v0.4/idr0062A/6001240.zarr")
-
 # this ensures that we create a Dask array, which gives us lazy loading
 array_wrapper = DaskArrayWrapper(chunks=10)
 arrays = read_multiscale_group(group, array_wrapper=array_wrapper)
 print(arrays)
 """
-{'0': <xarray.DataArray 'array-dc1746969a43c4e18b4a861ae8a5b5e5' (c: 2, z: 236,
-                                                            y: 275, x: 271)> Size: 70MB
-dask.array<array, shape=(2, 236, 275, 271), dtype=uint16, chunksize=(2, 10, 10, 10), chunktype=numpy.ndarray>
+{'0': <xarray.DataArray 'https://uk1s3.embassy.ebi.ac.uk/idr/zarr/v0.4/idr0062A/6001240.zarr/0' (
+                                                                                           c: 2,
+                                                                                           z: 236,
+                                                                                           y: 275,
+                                                                                           x: 271)> Size: 70MB
+dask.array<https://uk1s3.embassy.ebi.ac.uk/idr/zarr/v0.4/idr0062A/6001240.zarr/0, shape=(2, 236, 275, 271), dtype=uint16, chunksize=(2, 10, 10, 10), chunktype=numpy.ndarray>
 Coordinates:
   * c        (c) float64 16B 0.0 1.0
   * z        (z) float64 2kB 0.0 0.5002 1.0 1.501 ... 116.0 116.5 117.0 117.5
   * y        (y) float64 2kB 0.0 0.3604 0.7208 1.081 ... 97.67 98.03 98.39 98.75
-  * x        (x) float64 2kB 0.0 0.3604 0.7208 1.081 ... 96.23 96.59 96.95 97.31, '1': <xarray.DataArray 'array-9663bb2b4241268352500eb4e3bef581' (c: 2, z: 236,
-                                                            y: 137, x: 135)> Size: 17MB
-dask.array<array, shape=(2, 236, 137, 135), dtype=uint16, chunksize=(2, 10, 10, 10), chunktype=numpy.ndarray>
+  * x        (x) float64 2kB 0.0 0.3604 0.7208 1.081 ... 96.23 96.59 96.95 97.31, '1': <xarray.DataArray 'https://uk1s3.embassy.ebi.ac.uk/idr/zarr/v0.4/idr0062A/6001240.zarr/1' (
+                                                                                           c: 2,
+                                                                                           z: 236,
+                                                                                           y: 137,
+                                                                                           x: 135)> Size: 17MB
+dask.array<https://uk1s3.embassy.ebi.ac.uk/idr/zarr/v0.4/idr0062A/6001240.zarr/1, shape=(2, 236, 137, 135), dtype=uint16, chunksize=(2, 10, 10, 10), chunktype=numpy.ndarray>
 Coordinates:
   * c        (c) float64 16B 0.0 1.0
   * z        (z) float64 2kB 0.0 0.5002 1.0 1.501 ... 116.0 116.5 117.0 117.5
   * y        (y) float64 1kB 0.0 0.7208 1.442 2.162 ... 95.87 96.59 97.31 98.03
-  * x        (x) float64 1kB 0.0 0.7208 1.442 2.162 ... 94.42 95.15 95.87 96.59, '2': <xarray.DataArray 'array-dd59cfa6aeac755c5fd9b53fd121f3b8' (c: 2, z: 236,
-                                                            y: 68, x: 67)> Size: 4MB
-dask.array<array, shape=(2, 236, 68, 67), dtype=uint16, chunksize=(2, 10, 10, 10), chunktype=numpy.ndarray>
+  * x        (x) float64 1kB 0.0 0.7208 1.442 2.162 ... 94.42 95.15 95.87 96.59, '2': <xarray.DataArray 'https://uk1s3.embassy.ebi.ac.uk/idr/zarr/v0.4/idr0062A/6001240.zarr/2' (
+                                                                                           c: 2,
+                                                                                           z: 236,
+                                                                                           y: 68,
+                                                                                           x: 67)> Size: 4MB
+dask.array<https://uk1s3.embassy.ebi.ac.uk/idr/zarr/v0.4/idr0062A/6001240.zarr/2, shape=(2, 236, 68, 67), dtype=uint16, chunksize=(2, 10, 10, 10), chunktype=numpy.ndarray>
 Coordinates:
   * c        (c) float64 16B 0.0 1.0
   * z        (z) float64 2kB 0.0 0.5002 1.0 1.501 ... 116.0 116.5 117.0 117.5
