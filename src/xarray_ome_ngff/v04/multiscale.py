@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Literal
+from typing_extensions import deprecated
 
 from pydantic_ome_ngff.v04 import MultiscaleGroup
+from pydantic_ome_ngff.v04.multiscale import Group
 
 from xarray_ome_ngff.array_wrap import (
     ArrayWrapperSpec,
@@ -389,6 +391,48 @@ def model_multiscale_group(
     return group
 
 
+@deprecated("This function is deprecated. Use `model_multiscale_group instead.`")
+def model_group(
+    *,
+    arrays: dict[str, DataArray],
+    transform_precision: int | None = None,
+    chunks: tuple[int, ...] | tuple[tuple[int, ...]] | Literal["auto"] = "auto",
+    compressor: Codec | None = DEFAULT_COMPRESSOR,
+    fill_value: Any = 0,
+) -> Group:
+    """
+    Create a model of an OME-NGFF multiscale group from a dict of `xarray.DataArray`.
+    The dimensions / coordinates of the arrays will be used to infer OME-NGFF axis metadata, as well
+    as the OME-NGFF coordinate transformation metadata (i.e., scaling and translation).
+
+    Parameters
+    ----------
+    arrays: dict[str, DataArray]
+        A mapping from strings to `xarray.DataArray`.
+    transform_precision: int | None, default is None
+        Whether, and how much, to round the transformations estimated from the coordinates.
+        The default (`None`) results in no rounding; if `transform_precision` is an int, then
+        transforms will be rounded to `transform_precision` decimal places using `numpy.round`.
+    chunks: tuple[int] | tuple[tuple[int, ...]] | Literal["auto"], default = "auto"
+        The chunks for the arrays in the multiscale group.
+        If the string "auto" is provided, each array will have chunks set to the zarr-python default
+        value, which depends on the shape and dtype of the array.
+        If a single sequence of ints is provided, then this defines the chunks for all arrays.
+        If a sequence of sequences of ints is provided, then this defines the chunks for each array.
+    compressor: Codec | None, default = numcodecs.ZStd.
+        The compressor to use for the arrays. Default is `numcodecs.ZStd`.
+    fill_value: Any
+        The fill value for the Zarr arrays.
+    """
+    return model_multiscale_group(
+        arrays=arrays,
+        transform_precision=transform_precision,
+        chunks=chunks,
+        compressor=compressor,
+        fill_value=fill_value,
+    )
+
+
 def create_multiscale_group(
     *,
     store: BaseStore,
@@ -438,6 +482,59 @@ def create_multiscale_group(
         fill_value=fill_value,
     )
     return model.to_zarr(store, path, overwrite=overwrite)
+
+
+@deprecated("This function is deprecated. Use `create_multiscale_group` instead.")
+def create_group(
+    *,
+    store: BaseStore,
+    path: str,
+    arrays: dict[str, DataArray],
+    transform_precision: int | None = None,
+    chunks: tuple[int, ...] | tuple[tuple[int, ...]] | Literal["auto"] = "auto",
+    compressor: Codec | None = DEFAULT_COMPRESSOR,
+    fill_value: Any = 0,
+    overwrite: bool = False,
+) -> zarr.Group:
+    """
+    Create Zarr group that complies with 0.4 of the OME-NGFF multiscale specification from a dict
+    of `xarray.DataArray`.
+
+    Parameters
+    ----------
+
+    store: zarr.storage.BaseStore
+        The storage backend for the Zarr hierarchy.
+    path: str
+        The path in the storage backend for the multiscale group.
+    transform_precision: int | None, default is None
+        Whether, and how much, to round the transformations estimated from the coordinates.
+        The default (`None`) results in no rounding; specifying an `int` x will round transforms to
+        x decimal places using `numpy.round(transform, x)`.
+     chunks: tuple[int] | tuple[tuple[int, ...]] | Literal["auto"], default = "auto"
+        The chunks for the arrays in the multiscale group.
+        If the string "auto" is provided, each array will have chunks set to the zarr-python default
+        value, which depends on the shape and dtype of the array.
+        If a single sequence of ints is provided, then this defines the chunks for all arrays.
+        If a sequence of sequences of ints is provided, then this defines the chunks for each array.
+    compressor: Codec | None, default = numcodecs.ZStd.
+        The compressor to use for the arrays. Default is `numcodecs.ZStd`.
+    fill_value: Any
+        The fill value for the Zarr arrays.
+    overwrite: bool, default = False
+        Whether to overwrite an existing Zarr array or group at `path`. Default is False, which will
+        result in an exception being raised if a Zarr array or group already exists at `path`.
+    """
+    return create_multiscale_group(
+        store=store,
+        path=path,
+        arrays=arrays,
+        transform_precision=transform_precision,
+        chunks=chunks,
+        compressor=compressor,
+        fill_value=fill_value,
+        overwrite=overwrite,
+    )
 
 
 def read_multiscale_group(
@@ -494,6 +591,48 @@ def read_multiscale_group(
         result[dset.path] = arr_out
 
     return result
+
+
+@deprecated("This function is deprecated. Use `read_multiscale_group` instead.")
+def read_group(
+    group: zarr.Group,
+    *,
+    array_wrapper: (
+        ZarrArrayWrapper | DaskArrayWrapper | ArrayWrapperSpec
+    ) = ZarrArrayWrapper(),
+    multiscales_index: int = 0,
+) -> dict[str, DataArray]:
+    """
+    Create a dictionary of `xarray.DataArray` from a Zarr group that implements version 0.4 of the
+    OME-NGFF multiscale image specification.
+
+    The keys of the dictionary are the paths to the Zarr arrays. The values of the dictionary are
+    `xarray.DataArray` objects, one per Zarr array described in the OME-NGFF multiscale metadata,
+    with dimensions and coordinates that are consistent with the OME-NGFF `Axes` and
+    `coordinateTransformations` metadata.
+
+    Parameters
+    ----------
+    group: zarr.Group
+        A handle for the Zarr group that contains the `multiscales` metadata.
+    array_wrapper: BaseArrayWrapper | ArrayWrapperSpec, default is ZarrArrayWrapper
+        Either an object that implements `BaseArrayWrapper`, or a dict model of such a subclass,
+        which will be resolved to an object implementing `BaseArrayWrapper`. This object has a
+        `wrap` method that takes an instance of `zarr.Array` and returns another array-like object.
+        This enables wrapping Zarr arrays in a lazy array representation like Dask arrays
+        (e.g., via `DaskArrayWrapper), which is necessary when working with large Zarr arrays.
+    multiscales_index: int, default is 0
+        Version 0.4 of the OME-NGFF multiscales spec states that multiscale
+        metadata is stored in a JSON array within Zarr group attributes.
+        This parameter determines which element from that array to use when defining DataArrays.
+
+    Returns
+    -------
+    dict[str, DataArray]
+    """
+    return read_multiscale_group(
+        group=group, array_wrapper=array_wrapper, multiscales_index=multiscales_index
+    )
 
 
 def read_multiscale_array(
@@ -566,3 +705,36 @@ def read_multiscale_array(
         "Could not find version 0.4 OME-NGFF multiscale metadata in any Zarr groups"
         f"ancestral to the array at {array.path}"
     )
+
+
+@deprecated("This function is deprecated. Use `read_multiscale_array` instead.")
+def read_array(
+    array: zarr.Array,
+    *,
+    array_wrapper: (
+        ZarrArrayWrapper | DaskArrayWrapper | ArrayWrapperSpec
+    ) = ZarrArrayWrapper(),
+) -> DataArray:
+    """
+    Read a single Zarr array as an `xarray.DataArray`, using version 0.4 OME-NGFF multiscale
+    metadata.
+
+    The information necessary for creating the coordinates of the `DataArray` are not stored
+    in the attributes of the Zarr array given to this function. Instead, the coordinates must
+    be inferred by walking up the Zarr hierarchy, group by group, until a Zarr group with attributes
+    containing OME-NGFF multiscales metadata is found; then that metadata is parsed to determine
+    whether that metadata references the provided array. Once the correct multiscales metadata is
+    found, the coordinates can be constructed correctly.
+
+    Parameters
+    ----------
+    array: zarr.Array
+        A Zarr array that is part of a version 0.4 OME-NGFF multiscale image.
+    array_wrapper: ZarrArrayWrapper | DaskArrayWrapper | ArrayWrapperSpec, default is ZarrArrayWrapper
+        The array wrapper class to use when converting the Zarr array to an `xarray.DataArray`.
+    Returns
+    -------
+    xarray.DataArray
+    """
+
+    return read_multiscale_array(array, array_wrapper=array_wrapper)
