@@ -3,7 +3,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Literal
 from typing_extensions import deprecated
 
-from pydantic_ome_ngff.v04 import MultiscaleGroup, Group
+from pydantic_ome_ngff.v04 import MultiscaleGroup
+from pydantic_ome_ngff.v04.multiscale import Group
 
 from xarray_ome_ngff.array_wrap import (
     ArrayWrapperSpec,
