@@ -49,7 +49,7 @@ dependencies = [
   ]
 
 [[tool.hatch.envs.test.matrix]]
-python = ["3.10", "3.11"]
+python = ["3.10", "3.11", "3.12"]
 
 [tool.hatch.envs.test.scripts]
 run-coverage = "pytest --cov-config=pyproject.toml --cov=pkg --cov=tests"
